@@ -307,7 +307,7 @@ def opsigns(n: int) -> List[OpSign]:
 _OPERATORS: Dict[Tuple[int, bool, bool], List[Callable[[Sequence[SimpleExpr]], SimpleExpr]]] = {}
 
 
-def has_sub(expr: MulDiv) -> bool:
+def has_subtraction(expr: MulDiv) -> bool:
     """
     項に減算を含むなら真を返す。
     """
@@ -341,7 +341,7 @@ def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
             #
             # 式を生成しないのは、あくまで同等の式がほかに生成されるからなので、
             # 部分式が生成されないためにスキップの可否が変更になることはない。
-            if type(expr) == MulDiv and has_sub(expr):
+            if type(expr) == MulDiv and has_subtraction(expr):
                 return True
 
             # -0 は +0 と同等なので、0(または0除算になる項) は減算を生成しない。
