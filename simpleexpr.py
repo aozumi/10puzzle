@@ -366,16 +366,33 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # それ以外は減算を生成する。
             return False
 
-        # (検討中) 値が0になる AddSub は重複を省く。
-        #
-        # A-B+C の値が0ならば、符号を反転させた -A+B-C の値も0である。
-        # 両者は同等の式と見做すので、片方だけ生成すればよい。
-        #
-        # よって生成した AddSub の値が0になる場合、最初の非0の項が
-        # 加算項なら残し、減算項なら捨てる。
+        # 最初の非0項のインデックス
+        first_nonzero_index = next(iter(
+            i for i,v in enumerate(t.eval() for t in terms) if v != 0
+        ), None)
 
         for s in opsigns(skip_sub, terms):
-            yield op_addsub(s)(terms)
+            expr = op_addsub(s)(terms)
+
+            # 値が0になる AddSub は重複を省く。
+            #
+            # A-B+C の値が0ならば、符号を反転させた -A+B-C の値も0である。
+            # 両者は同等の式と見做すので、片方だけ生成すればよい。
+            #
+            # よって生成した AddSub の値が0になる場合、最初の非0の項が
+            # 加算項なら残し、減算項なら捨てる。
+            if (expr.eval() == 0
+                and first_nonzero_index is not None
+                and s[first_nonzero_index] < 0):
+                continue
+
+            # (検討中) 任意個の部分項(各項は非0)の和が0になる場合、
+            # それらを符号反転したケースも0になる。
+            # よって両者を重複するとみなし片方を排除したい。
+            # 最初の項が加算項なら残し、減算項なら捨てる。
+            # これは上の重複排除を一般化したもの。
+
+            yield expr
 
     if can_muldiv:
         # 項によっては乗算のみ生成し、除算は生成しない。

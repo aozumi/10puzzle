@@ -202,7 +202,7 @@ def test_single_exprs__1_2_3():
         addsub([1], [2, 3]),
         addsub([2, 3], [1]),
         addsub([2], [1, 3]),
-        addsub([3], [1, 2]),
+        # addsub([3], [1, 2]), 0 になる AddSub の重複排除により生成されない
         muldiv([1, 2, 3], []),
         muldiv([1, 2], [3]),
         # muldiv([2, 3], [1]),
