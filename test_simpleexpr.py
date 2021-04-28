@@ -1,5 +1,5 @@
 from simpleexpr import SimpleExpr, Value, AddSub, MulDiv
-from simpleexpr import build_exprs, signs_to_str, operators, single_exprs
+from simpleexpr import build_exprs, signs_to_str, single_exprs
 
 
 class TestValue:
@@ -181,46 +181,6 @@ def test_build_exprs__2ops():
     expected = list(flatten(exprs_35_7 + exprs_37_5 + exprs_57_3 + exprs_357))
     actual = list(build_exprs(NUMS))
     assert expected == actual
-
-
-def test_operators__empty():
-    assert operators([]) == []
-
-
-def test_operators__2_3():
-    ops = operators(list(map(Value, [2, 3])))
-    assert [x.name for x in ops] == [
-        'addsub++',
-        'addsub+-',
-        'addsub-+',
-        'muldiv++',
-        'muldiv+-',
-        'muldiv-+',
-    ]
-
-
-def test_operators__1_2():
-    ops = operators(list(map(Value, [1, 2])))
-    assert [x.name for x in ops] == [
-        'addsub++',
-        'addsub+-',
-        'addsub-+',
-        'muldiv++',
-        'muldiv+-',
-        # 'muldiv-+' は生成されない
-    ]
-
-
-def test_operators__0_2():
-    ops = operators(list(map(Value, [0, 2])))
-    assert [x.name for x in ops] == [
-        'addsub++',
-        'addsub+-',
-        # 'addsub-+', 生成されない
-        'muldiv++',
-        'muldiv+-',
-        # 'muldiv-+', 生成されない
-    ]
 
 
 def test_single_exprs__1_2():

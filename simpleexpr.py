@@ -285,10 +285,10 @@ def op_muldiv(signs) -> Operator:
 
 
 # メモ化用記憶
-_OPSIGNS: Dict[int, List[OpSign]] = {}
+_OPSIGNS: Dict[int, List[Tuple[OpSign, ...]]] = {}
 
 
-def opsigns(n: int) -> List[OpSign]:
+def opsigns_full(n: int) -> List[Tuple[OpSign, ...]]:
     """
     opsigns は引数をポジティブな項とネガティブな項に
     振り分ける分け方を指定する。
@@ -299,12 +299,8 @@ def opsigns(n: int) -> List[OpSign]:
     ただしポジティブな項が0個になるような振り分け方はしないこととする。
     """
     if n not in _OPSIGNS:
-        _OPSIGNS[n] = cast(List[OpSign], list(product((1, -1), repeat=n))[:-1])
+        _OPSIGNS[n] = cast(List[Tuple[OpSign, ...]], list(product((1, -1), repeat=n)))[:-1]
     return _OPSIGNS[n]
-
-
-# メモ化用記憶
-_OPERATORS: Dict[Tuple[int, bool, bool], List[Callable[[Sequence[SimpleExpr]], SimpleExpr]]] = {}
 
 
 def has_subtraction(expr: MulDiv) -> bool:
@@ -315,24 +311,33 @@ def has_subtraction(expr: MulDiv) -> bool:
                for t in expr.mulargs + expr.divisors)
 
 
+def opsigns(skip_negative_p, terms) -> Iterable[Tuple[OpSign, ...]]:
+    """
+    opsigns は引数をポジティブな項とネガティブな項に
+    振り分ける分け方を指定する。
+
+     - ポジティブな項: AddSubの場合は加算、MulDivの場合は乗算する項
+     - ネガティブな項: AddSubの場合は減算、MulDivの場合は除算する項
+
+    ただしポジティブな項が0個になるような振り分け方はしないこととする。
+    また、skip_negative_p が真を返す項はネガティブな項にはしない。
+    """
+    skips = list(map(skip_negative_p, terms))
+    POS_NEG = (1, -1)
+    POS_ONLY = (1,)
+    if any(skips):
+        return product(*((POS_NEG, POS_ONLY)[s] for s in skips))
+    else:
+        return opsigns_full(len(terms))
+
+
 def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
     """
     terms に含まれる項全てをオペランドとする演算ノードを生成する。
     """
-    ops = operators(terms)
-
-    for op in ops:
-        yield op(terms)
-
-
-def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
-    """
-    引数に対して可能な演算のリストを生成する。
-    """
     arity = len(terms)
     can_addsub = AddSub not in map(type, terms)
     can_muldiv = MulDiv not in map(type, terms)
-    ops: List[Operator] = []
 
     if can_addsub:
         # 項によっては加算のみ生成し、減算は生成しない。
@@ -361,8 +366,6 @@ def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
             # それ以外は減算を生成する。
             return False
 
-        skip_sub_mask = list(map(skip_sub, terms))
-
         # (検討中) 値が0になる AddSub は重複を省く。
         #
         # A-B+C の値が0ならば、符号を反転させた -A+B-C の値も0である。
@@ -371,12 +374,8 @@ def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
         # よって生成した AddSub の値が0になる場合、最初の非0の項が
         # 加算項なら残し、減算項なら捨てる。
 
-        def use_addsub(opsigns):
-            for s, m in zip(opsigns, skip_sub_mask):
-                if s < 0 and m:
-                    return False
-            return True
-        ops += list(map(op_addsub, filter(use_addsub, opsigns(arity))))
+        for s in opsigns(skip_sub, terms):
+            yield op_addsub(s)(terms)
 
     if can_muldiv:
         # 項によっては乗算のみ生成し、除算は生成しない。
@@ -391,8 +390,6 @@ def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
 
             # それ以外は生成する。
             return False
-
-        skip_div_mask = list(map(skip_div, terms))
 
         # (検討中) 減算を含む項が複数ある場合、特定のケースのみ生成する。
         #
@@ -434,49 +431,8 @@ def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
         # 式の値は0になるから、
         # 0*A*B も 0*A/B も 0/A/B も同じと見做す。
 
-        def use_muldiv(opsigns):
-            for s, m in zip(opsigns, skip_div_mask):
-                if s < 0 and m:
-                    return False
-            return True
-        ops += list(map(op_muldiv, filter(use_muldiv, opsigns(arity))))
-
-    return ops
-
-
-# def operators(terms):
-#     arity = len(terms)
-#     can_addsub = AddSub not in map(type, terms)
-#     can_muldiv = MulDiv not in map(type, terms)
-#     return operators_1(len(terms),
-#                        AddSub not in map(type, terms),
-#                        MulDiv not in map(type, terms))
-
-
-def operators_1(arity: int, can_addsub: bool, can_muldiv: bool) -> List[Callable[[Sequence[SimpleExpr]], SimpleExpr]]:
-    """
-    n個の引数に対して可能な演算のリストを生成する。
-
-    AddSub、MulDivは同じクラスの項の直接の入れ子にならない。
-    すなわち、
-    引数にAddSubがある場合、op_addsubは演算子にならない。
-    引数にMulDivがある場合、op_muldivは演算子にならない。
-
-    もし引数に選ばれた項に AddSub と MulDiv の両方が含まれる場合は
-    式は完成されない。
-    """
-    key = (arity, can_addsub, can_muldiv)
-    if key in _OPERATORS:
-        return _OPERATORS[key]
-
-    ops: List[Callable[[Sequence[SimpleExpr]], SimpleExpr]] = []
-    if can_addsub:
-        ops += list(map(op_addsub, opsigns(arity)))
-    if can_muldiv:
-        ops += list(map(op_muldiv, opsigns(arity)))
-
-    _OPERATORS[key] = ops
-    return ops
+        for s in opsigns(skip_div, terms):
+            yield op_muldiv(s)(terms)
 
 
 ###
