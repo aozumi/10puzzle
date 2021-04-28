@@ -315,6 +315,16 @@ def has_subtraction(expr: MulDiv) -> bool:
                for t in expr.mulargs + expr.divisors)
 
 
+def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
+    """
+    terms に含まれる項全てをオペランドとする演算ノードを生成する。
+    """
+    ops = operators(terms)
+
+    for op in ops:
+        yield op(terms)
+
+
 def operators(terms: Sequence[SimpleExpr]) -> List[Operator]:
     """
     引数に対して可能な演算のリストを生成する。
@@ -527,11 +537,8 @@ def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
                       indices,
                       ','.join(map(str, selected_terms)))
 
-            ops = operators(selected_terms)
-
-            for op in ops:
-                item = op(selected_terms)
-                yield from build_exprs_1(sortargs([item] + rest))
+            for expr in single_exprs(selected_terms):
+                yield from build_exprs_1(sortargs([expr] + rest))
 
 
 def build_exprs(nums: Sequence[float]) -> Generator[SimpleExpr, None, None]:
