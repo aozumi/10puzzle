@@ -407,6 +407,18 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # それ以外は生成する。
             return False
 
+        # 0となる項がある場合、乗算のみを生成する。
+        #
+        # 0が除数になる式はもちろん生成しない(skip_divでも実現済)。
+        #
+        # 0が乗数(被除数)になる場合、他の項が乗数であれ除数であれ
+        # 式の値は0になるから、
+        # 0*A*B も 0*A/B も 0/A/B も同じと見做す。
+
+        if 0 in evalargs(terms):
+            yield op_muldiv([1]*arity)(terms)
+            return
+
         # (検討中) 減算を含む項が複数ある場合、特定のケースのみ生成する。
         #
         # A-B, C-D, E の3項を引数とする場合を考える。
@@ -438,19 +450,6 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
         # - 減算を含む項の値を掛け合わせて <0 になる場合:
         #   最後の減算項の値が負、それ以外の減算項の値が正の場合のみ MulDiv を生成する。
         # ※上記の減算を含む項は、値が0になるものは含めずに考える。
-
-
-        # 0となる項がある場合、乗算のみを生成する。
-        #
-        # 0が除数になる式はもちろん生成しない(skip_divでも実現済)。
-        #
-        # 0が乗数(被除数)になる場合、他の項が乗数であれ除数であれ
-        # 式の値は0になるから、
-        # 0*A*B も 0*A/B も 0/A/B も同じと見做す。
-
-        if any(t.eval() == 0 for t in terms):
-            yield op_muldiv([1]*arity)(terms)
-            return
 
         for s in opsigns(skip_div, terms):
             yield op_muldiv(s)(terms)
