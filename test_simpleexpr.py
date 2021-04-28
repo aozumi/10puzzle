@@ -1,5 +1,5 @@
 from simpleexpr import SimpleExpr, Value, AddSub, MulDiv
-from simpleexpr import build_exprs, signs_to_str, operators
+from simpleexpr import build_exprs, signs_to_str, operators, single_exprs
 
 
 class TestValue:
@@ -222,6 +222,54 @@ def test_operators__0_2():
         # 'muldiv-+', 生成されない
     ]
 
+
+def test_single_exprs__1_2():
+    terms = list(map(Value, [1, 2]))
+    assert set(single_exprs(terms)) == set([
+        add(1, 2),
+        sub(1, 2),
+        sub(2, 1),
+        mul(1, 2),
+        div(1, 2),
+    ])
+
+def test_single_exprs__1_2_3():
+    terms = list(map(Value, [1, 2, 3]))
+    assert set(single_exprs(terms)) == set([
+        addsub([1, 2, 3], []),
+        addsub([1, 2], [3]),
+        addsub([1, 3], [2]),
+        addsub([1], [2, 3]),
+        addsub([2, 3], [1]),
+        addsub([2], [1, 3]),
+        addsub([3], [1, 2]),
+        muldiv([1, 2, 3], []),
+        muldiv([1, 2], [3]),
+        # muldiv([2, 3], [1]),
+        muldiv([1, 3], [2]),
+        muldiv([1], [2, 3]),
+        # muldiv([2], [1, 3]),
+        # muldiv([3], [1, 2]),
+    ])
+
+def test_single_exprs__2_3_4():
+    terms = list(map(Value, [2, 3, 4]))
+    assert set(single_exprs(terms)) == set([
+        addsub([2, 3, 4], []),
+        addsub([2, 3], [4]),
+        addsub([2, 4], [3]),
+        addsub([2], [3, 4]),
+        addsub([3, 4], [2]),
+        addsub([3], [2, 4]),
+        addsub([4], [2, 3]),
+        muldiv([2, 3, 4], []),
+        muldiv([2, 3], [4]),
+        muldiv([2, 4], [3]),
+        muldiv([2], [3, 4]),
+        muldiv([3, 4], [2]),
+        muldiv([3], [2, 4]),
+        muldiv([4], [2, 3]),
+    ])
 
 # def test_operators__empty():
 #     assert operators(2, False, False) == []
