@@ -120,7 +120,7 @@ class Value (SimpleExpr):
 T = TypeVar('T', bound=SimpleExpr)
 
 
-def evalargs(args: Iterable[T]) -> Generator[float, None, None]:
+def eval_exprs(args: Iterable[T]) -> Generator[float, None, None]:
     return (x.eval() for x in args)
 
 
@@ -180,7 +180,7 @@ class AddSub (SimpleExpr):
 
     def eval(self) -> float:
         if self._eval is None:
-            self._eval = add(evalargs(self.addargs)) - add(evalargs(self.subargs))
+            self._eval = add(eval_exprs(self.addargs)) - add(eval_exprs(self.subargs))
         return self._eval
 
     def to_s(self, *, head: bool = False) -> str:
@@ -218,7 +218,7 @@ class MulDiv (SimpleExpr):
 
     def eval(self) -> float:
         if self._eval is None:
-            self._eval = mul(evalargs(self.mulargs)) / mul(evalargs(self.divisors))
+            self._eval = mul(eval_exprs(self.mulargs)) / mul(eval_exprs(self.divisors))
         return self._eval
 
     def _argstr(self, arg, head: bool = False) -> str:
@@ -415,7 +415,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
         # 式の値は0になるから、
         # 0*A*B も 0*A/B も 0/A/B も同じと見做す。
 
-        if 0 in evalargs(terms):
+        if 0 in eval_exprs(terms):
             yield op_muldiv([1]*arity)(terms)
             return
 
