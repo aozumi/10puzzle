@@ -72,6 +72,13 @@ class SimpleExpr:
        - 例: 3-(5-7) と 3+(7-5) と (3-5)+7 (括弧を開けば 3+7-5 になる)
      - str()で式の文字列表現を得ることができる。そのとき不要な括弧はつかない。
     """
+
+    def minid(self) -> int:
+        raise NotImplemented
+
+    def maxid(self) -> int:
+        raise NotImplemented
+
     def eval(self) -> float:
         """
         式の値を計算する。
@@ -92,11 +99,31 @@ class SimpleExpr:
 
 
 class Value (SimpleExpr):
+    id_counter = 0
+
+    @classmethod
+    def next_id(klass) -> int:
+        r = Value.id_counter
+        Value.id_counter += 1
+        return r
+
+    @classmethod
+    def reset_id(klass) -> None:
+        Value.id_counter = 0
+
+
     """
     値ノード。
     """
     def __init__(self, value: int) -> None:
         self.value = value
+        self.id = Value.next_id()
+
+    def minid(self) -> int:
+        return self.id
+
+    def maxid(self) -> int:
+        return self.id
 
     def eval(self) -> float:
         return self.value
@@ -178,6 +205,12 @@ class AddSub (SimpleExpr):
         assert self.addargs, 'addargs must not be empty'
         self._eval :Optional[float] = None
 
+    def minid(self) -> int:
+        return min(x.minid() for x in (self.addargs + self.subargs))
+
+    def maxid(self) -> int:
+        return max(x.maxid() for x in (self.addargs + self.subargs))
+
     def eval(self) -> float:
         if self._eval is None:
             self._eval = add(eval_exprs(self.addargs)) - add(eval_exprs(self.subargs))
@@ -215,6 +248,12 @@ class MulDiv (SimpleExpr):
 
         assert self.mulargs, 'mulargs must not be empty'
         self._eval :Optional[float] = None
+
+    def minid(self) -> int:
+        return min(x.minid() for x in (self.mulargs + self.divisors))
+
+    def maxid(self) -> int:
+        return max(x.maxid() for x in (self.mulargs + self.divisors))
 
     def eval(self) -> float:
         if self._eval is None:
