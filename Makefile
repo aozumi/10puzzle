@@ -6,4 +6,4 @@ test: .PHONY
 	${PYTEST}
 
 typecheck: .PHONY
-	${MYPY} findall.py test_simpleexpr.py
+	${MYPY} findall.py test_simpleexpr.py test_utils.py

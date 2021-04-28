@@ -4,6 +4,8 @@ from typing import Union, List, Literal, Sequence, Generator, Iterable, TypeVar,
 from itertools import combinations, product
 import logging
 
+from utils import first
+
 
 LOG = logging.getLogger(__name__)
 
@@ -363,10 +365,10 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # それ以外は減算を生成する。
             return False
 
-        # 最初の非0項のインデックス
-        first_nonzero_index = next(iter(
-            i for i,v in enumerate(t.eval() for t in terms) if v != 0
-        ), None)
+        # 最初の非0項のインデックス (非0項がなければ None)
+        first_nonzero_index = first(
+            i for i, t in enumerate(terms) if t.eval() != 0
+        )
 
         for s in opsigns(skip_sub, terms):
             expr = op_addsub(s)(terms)
