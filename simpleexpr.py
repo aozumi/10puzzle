@@ -122,11 +122,8 @@ def evalargs(args: Iterable[T]) -> Generator[float, None, None]:
     return (x.eval() for x in args)
 
 
-def safeeval(x: SimpleExpr) -> float:
-    try:
-        return x.eval()
-    except ZeroDivisionError:
-        return 0
+def eval_expr(x: SimpleExpr) -> float:
+    return x.eval()
 
 
 def mysorted(args, *, key):
@@ -141,7 +138,7 @@ def sortargs(args: Sequence[T]) -> List[T]:
     values = filter(lambda x: isinstance(x, Value), args)
     subexprs = filter(lambda x: not isinstance(x, Value), args)
 
-    return mysorted(values, key=safeeval) + mysorted(subexprs, key=sortkey)
+    return mysorted(values, key=eval_expr) + mysorted(subexprs, key=sortkey)
 
 
 def sortkey(expr: SimpleExpr) -> List:
@@ -151,11 +148,11 @@ def sortkey(expr: SimpleExpr) -> List:
     if isinstance(expr, Value):
         return [expr.value]
     elif isinstance(expr, AddSub):
-        return [safeeval(expr),
+        return [expr.eval(),
                 list(map(sortkey, expr.addargs)),
                 list(map(sortkey, expr.subargs))]
     elif isinstance(expr, MulDiv):
-        return [safeeval(expr),
+        return [expr.eval(),
                 list(map(sortkey, expr.mulargs)),
                 list(map(sortkey, expr.divisors))]
     else:
@@ -360,7 +357,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
                 return True
 
             # -0 は +0 と同等なので、0(または0除算になる項) は減算を生成しない。
-            if safeeval(expr) == 0:
+            if expr.eval() == 0:
                 return True
 
             # それ以外は減算を生成する。
@@ -402,7 +399,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             """
             # X/0 は生成しない。
             # また、X/±1 は X*±1 と同等なので、生成しない。
-            if safeeval(expr) in (0, 1, -1):
+            if expr.eval() in (0, 1, -1):
                 return True
 
             # それ以外は生成する。
