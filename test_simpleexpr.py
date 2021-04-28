@@ -231,6 +231,14 @@ def test_single_exprs__2_3_4():
         muldiv([4], [2, 3]),
     ])
 
+def test_single_exprs__1sub1_2_3():
+    terms = [Value(2), Value(3), sub(1, 1)]
+    # 0となる項を含むので乗算のみ生成
+    assert set(single_exprs(terms)) == set([
+        MulDiv([Value(2), Value(3), sub(1, 1)], [])
+    ])
+
+
 # def test_operators__empty():
 #     assert operators(2, False, False) == []
 
