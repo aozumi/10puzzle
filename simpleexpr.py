@@ -419,6 +419,8 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             yield op_muldiv([1]*arity)(terms)
             return
 
+        # 以下では、全ての項は非0である
+
         # (検討中) 減算を含む項が複数ある場合、特定のケースのみ生成する。
         #
         # A-B, C-D, E の3項を引数とする場合を考える。
@@ -447,9 +449,32 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
         # 上記のように、それらの半分は同等なので、次のようにして生成を省略できる。
         # - 減算を含む項の値を掛け合わせて >0 になる場合:
         #   全ての減算項の値が正の場合のみ MulDiv を生成する。
-        # - 減算を含む項の値を掛け合わせて <0 になる場合:
-        #   最後の減算項の値が負、それ以外の減算項の値が正の場合のみ MulDiv を生成する。
+        # - (検討中) 減算を含む項の値を掛け合わせて <0 になる場合:
+        #   最後の減算項の値が負、それ以外の減算項の値が正の場合のみ MulDiv を
+        #   生成する……というのはうまくいかない!
+        #   項の値の符号の変化により、項の並びも都度変化するから。
+        #   なお、項の数が奇数なら全て負という方法も考えられるが、項の数が
+        #   偶数だとそうはいかない。
+        #   Value に id を持たせ、一番大きい id の Value を含む項を
+        #   「最後の項」とする、というのはどうか。
+        #
         # ※上記の減算を含む項は、値が0になるものは含めずに考える。
+
+        nonzero_subtractions = [ t.eval() for t in terms
+                                 if isinstance(t, AddSub) and t.subargs
+        ]
+
+        if len(nonzero_subtractions) >= 2:
+            if mul(nonzero_subtractions) > 0:
+                # 減算を含む項が複数あり、掛け合わせて正になる場合、
+                # 全ての項の値が正の場合のみ生成する。
+                # その他の場合は重複ケースとみなして捨てる。
+                if not all(x > 0 for x in nonzero_subtractions):
+                    return
+
+            else:               # 掛け合わせて負になる場合
+                # (検討中)
+                pass
 
         for s in opsigns(skip_div, terms):
             yield op_muldiv(s)(terms)

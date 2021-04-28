@@ -144,8 +144,10 @@ def binary_expr(op1, op2, a, b):
         op2(b, a)
     ]
 
+
 def binary_addsub(a, b): return binary_expr(add, sub, a, b)
 def binary_muldiv(a, b): return binary_expr(mul, div, a, b)
+
 
 def ternary_expr(op, a, b, c):
     return [
@@ -158,8 +160,10 @@ def ternary_expr(op, a, b, c):
         op([c], [a, b]),
     ]
 
+
 def ternary_addsub(a, b, c): return ternary_expr(addsub, a, b, c)
 def ternary_muldiv(a, b, c): return ternary_expr(muldiv, a, b, c)
+
 
 def flatten(xs):
     for x in xs:
@@ -167,6 +171,7 @@ def flatten(xs):
             yield from flatten(x)
         else:
             yield x
+
 
 def test_build_exprs__2ops():
     NUMS = [3, 5, 7]
@@ -193,6 +198,7 @@ def test_single_exprs__1_2():
         div(1, 2),
     ])
 
+
 def test_single_exprs__1_2_3():
     terms = list(map(Value, [1, 2, 3]))
     assert set(single_exprs(terms)) == set([
@@ -211,6 +217,7 @@ def test_single_exprs__1_2_3():
         # muldiv([2], [1, 3]),
         # muldiv([3], [1, 2]),
     ])
+
 
 def test_single_exprs__2_3_4():
     terms = list(map(Value, [2, 3, 4]))
@@ -231,6 +238,7 @@ def test_single_exprs__2_3_4():
         muldiv([4], [2, 3]),
     ])
 
+
 def test_single_exprs__1sub1_2_3():
     terms = [Value(2), Value(3), sub(1, 1)]
     # 0となる項を含むので乗算のみ生成
@@ -238,6 +246,37 @@ def test_single_exprs__1sub1_2_3():
         MulDiv([Value(2), Value(3), sub(1, 1)], [])
     ])
 
+
+def test_single_exprs__muldiv_of_sub_sub():
+    # 1, 6, 7, 9 = (9-7)*(6-1) = (1-6)*(7-9)
+    # しかし 1-6, 7-9 を項に持つ MulDiv は生成しない
+    terms = [sub(1, 6), sub(7, 9)]
+    assert set(t for t in single_exprs(terms)
+               if isinstance(t, MulDiv)) == set()
+
+    # 6-1, 9-7 を項に持つ MulDiv は生成する
+    terms2 = [sub(6, 1), sub(9, 7)]
+    assert set(t for t in single_exprs(terms2)
+               if isinstance(t, MulDiv)) == set([
+                       MulDiv([sub(6, 1), sub(9, 7)], []),
+                       MulDiv([sub(6, 1)], [sub(9, 7)]),
+                       MulDiv([sub(9, 7)], [sub(6, 1)]),
+               ])
+
+    # # 1-6 と 9-7 の場合
+    # # 1-6, 9-7  を項に持つ MulDiv は生成する
+    # terms = [sub(1, 6), sub(7, 9)]
+    # assert set(t for t in single_exprs(terms)
+    #            if isinstance(t, MulDiv)) == set()
+
+    # # 6-1, 9-7 を項に持つ MulDiv は生成する
+    # terms2 = [sub(6, 1), sub(9, 7)]
+    # assert set(t for t in single_exprs(terms2)
+    #            if isinstance(t, MulDiv)) == set([
+    #                    MulDiv([sub(6, 1), sub(9, 7)], []),
+    #                    MulDiv([sub(6, 1)], [sub(9, 7)]),
+    #                    MulDiv([sub(9, 7)], [sub(6, 1)]),
+    #            ])
 
 # def test_operators__empty():
 #     assert operators(2, False, False) == []
