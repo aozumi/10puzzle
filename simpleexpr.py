@@ -214,13 +214,14 @@ class AddSub (SimpleExpr):
     """
 
     def __init__(self, addargs: Iterable[Union[Value, MulDiv]], subargs: Iterable[Union[Value, MulDiv]]) -> None:
-        """
-        addargs, subargs は sort_by_value によりソート済みと仮定する。
-        それによって、引数の組み合わせに対して内部構造が一意になる。
-        """
-
-        self.addargs: Tuple[Union[Value, MulDiv], ...] = tuple(addargs)
-        self.subargs: Tuple[Union[Value, MulDiv], ...] = tuple(subargs)
+        # addargs, subargs は値でソートして保持する。
+        # それによって、引数の組み合わせに対して内部構造が一意になる。
+        #
+        # また、2*3+2*5 のように同じ数を複数含む構造も一意に定まる。
+        # (idでソートする場合、AddSub([2*3, 2'*5], []) と
+        # AddSub([2*5, 2'*3], []) の2通りが生じてしまう)
+        self.addargs: Tuple[Union[Value, MulDiv], ...] = tuple(sort_by_value(addargs))
+        self.subargs: Tuple[Union[Value, MulDiv], ...] = tuple(sort_by_value(subargs))
 
         assert self.addargs, 'addargs must not be empty'
         self._eval :Optional[float] = None
@@ -258,13 +259,10 @@ class MulDiv (SimpleExpr):
     """
 
     def __init__(self, mulargs: Iterable[Union[Value, AddSub]], divisors: Iterable[Union[Value, AddSub]]) -> None:
-        """
-        mulargs, divisors は sort_by_value によりソート済みと仮定する。
-        それによって、引数の組み合わせに対して内部構造が一意になる。
-        """
-
-        self.mulargs: Tuple[Union[Value, AddSub], ...] = tuple(mulargs)
-        self.divisors: Tuple[Union[Value, AddSub], ...] = tuple(divisors)
+        # mulargs, divisors は値でソートして保持する。
+        # それによって、引数の組み合わせに対して内部構造が一意になる。
+        self.mulargs: Tuple[Union[Value, AddSub], ...] = tuple(sort_by_value(mulargs))
+        self.divisors: Tuple[Union[Value, AddSub], ...] = tuple(sort_by_value(divisors))
 
         assert self.mulargs, 'mulargs must not be empty'
         self._eval :Optional[float] = None
