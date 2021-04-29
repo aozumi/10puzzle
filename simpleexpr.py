@@ -72,6 +72,13 @@ class SimpleExpr:
        - 例: 3-(5-7) と 3+(7-5) と (3-5)+7 (括弧を開けば 3+7-5 になる)
      - str()で式の文字列表現を得ることができる。そのとき不要な括弧はつかない。
     """
+
+    def minid(self) -> int:
+        raise NotImplemented
+
+    def maxid(self) -> int:
+        raise NotImplemented
+
     def eval(self) -> float:
         """
         式の値を計算する。
@@ -92,11 +99,31 @@ class SimpleExpr:
 
 
 class Value (SimpleExpr):
+    id_counter = 0
+
+    @classmethod
+    def next_id(klass) -> int:
+        r = Value.id_counter
+        Value.id_counter += 1
+        return r
+
+    @classmethod
+    def reset_id(klass) -> None:
+        Value.id_counter = 0
+
+
     """
     値ノード。
     """
     def __init__(self, value: int) -> None:
         self.value = value
+        self.id = Value.next_id()
+
+    def minid(self) -> int:
+        return self.id
+
+    def maxid(self) -> int:
+        return self.id
 
     def eval(self) -> float:
         return self.value
@@ -118,6 +145,7 @@ class Value (SimpleExpr):
 
 
 T = TypeVar('T', bound=SimpleExpr)
+S = TypeVar('S')
 
 
 def eval_exprs(args: Iterable[T]) -> Generator[float, None, None]:
@@ -128,7 +156,7 @@ def eval_expr(x: SimpleExpr) -> float:
     return x.eval()
 
 
-def mysorted(args, *, key):
+def mysorted(args: Iterable[T], *, key) -> List[T]:
     args = list(args)
     if len(args) < 2:
         return args
@@ -136,14 +164,28 @@ def mysorted(args, *, key):
         return sorted(args, key=key)
 
 
-def sortargs(args: Sequence[T]) -> List[T]:
-    values = filter(lambda x: isinstance(x, Value), args)
-    subexprs = filter(lambda x: not isinstance(x, Value), args)
+def sort_1(value_key: Callable[[Value], S],
+           subexpr_key: Callable[[Union[AddSub, MulDiv]], S],
+           exprs: Iterable[T]
+) -> Sequence[T]:
+    if isinstance(exprs, Sequence) and len(exprs) < 2:
+        return exprs
 
-    return mysorted(values, key=eval_expr) + mysorted(subexprs, key=sortkey)
+    exprs_list = list(exprs)
+    if len(exprs_list) < 2:
+        return exprs_list
+
+    values = filter(lambda x: isinstance(x, Value), exprs_list)
+    subexprs = filter(lambda x: not isinstance(x, Value), exprs_list)
+
+    return mysorted(values, key=value_key) + mysorted(subexprs, key=subexpr_key)
 
 
-def sortkey(expr: SimpleExpr) -> List:
+def sort_by_value(exprs: Iterable[T]) -> Sequence[T]:
+    return sort_1(eval_expr, sort_by_value_key, exprs)
+
+
+def sort_by_value_key(expr: SimpleExpr) -> List:
     """
     SimpleExprをソートするためのkey関数。
     """
@@ -151,14 +193,19 @@ def sortkey(expr: SimpleExpr) -> List:
         return [expr.value]
     elif isinstance(expr, AddSub):
         return [expr.eval(),
-                list(map(sortkey, expr.addargs)),
-                list(map(sortkey, expr.subargs))]
+                list(map(sort_by_value_key, expr.addargs)),
+                list(map(sort_by_value_key, expr.subargs))]
     elif isinstance(expr, MulDiv):
         return [expr.eval(),
-                list(map(sortkey, expr.mulargs)),
-                list(map(sortkey, expr.divisors))]
+                list(map(sort_by_value_key, expr.mulargs)),
+                list(map(sort_by_value_key, expr.divisors))]
     else:
         raise TypeError('expr must be a SimpleExpr')
+
+
+def sort_by_id(exprs: Iterable[T]) -> Sequence[T]:
+    minid = lambda x: x.minid()
+    return sort_1(minid, minid, exprs)
 
 
 class AddSub (SimpleExpr):
@@ -167,16 +214,23 @@ class AddSub (SimpleExpr):
     """
 
     def __init__(self, addargs: Iterable[Union[Value, MulDiv]], subargs: Iterable[Union[Value, MulDiv]]) -> None:
-        """
-        addargs, subargs は sortargs によりソート済みと仮定する。
-        それによって、引数の組み合わせに対して内部構造が一意になる。
-        """
-
-        self.addargs: Tuple[Union[Value, MulDiv], ...] = tuple(addargs)
-        self.subargs: Tuple[Union[Value, MulDiv], ...] = tuple(subargs)
+        # addargs, subargs は値でソートして保持する。
+        # それによって、引数の組み合わせに対して内部構造が一意になる。
+        #
+        # また、2*3+2*5 のように同じ数を複数含む構造も一意に定まる。
+        # (idでソートする場合、AddSub([2*3, 2'*5], []) と
+        # AddSub([2*5, 2'*3], []) の2通りが生じてしまう)
+        self.addargs: Tuple[Union[Value, MulDiv], ...] = tuple(sort_by_value(addargs))
+        self.subargs: Tuple[Union[Value, MulDiv], ...] = tuple(sort_by_value(subargs))
 
         assert self.addargs, 'addargs must not be empty'
         self._eval :Optional[float] = None
+
+    def minid(self) -> int:
+        return min(x.minid() for x in (self.addargs + self.subargs))
+
+    def maxid(self) -> int:
+        return max(x.maxid() for x in (self.addargs + self.subargs))
 
     def eval(self) -> float:
         if self._eval is None:
@@ -205,16 +259,19 @@ class MulDiv (SimpleExpr):
     """
 
     def __init__(self, mulargs: Iterable[Union[Value, AddSub]], divisors: Iterable[Union[Value, AddSub]]) -> None:
-        """
-        mulargs, divisors は sortargs によりソート済みと仮定する。
-        それによって、引数の組み合わせに対して内部構造が一意になる。
-        """
-
-        self.mulargs: Tuple[Union[Value, AddSub], ...] = tuple(mulargs)
-        self.divisors: Tuple[Union[Value, AddSub], ...] = tuple(divisors)
+        # mulargs, divisors は値でソートして保持する。
+        # それによって、引数の組み合わせに対して内部構造が一意になる。
+        self.mulargs: Tuple[Union[Value, AddSub], ...] = tuple(sort_by_value(mulargs))
+        self.divisors: Tuple[Union[Value, AddSub], ...] = tuple(sort_by_value(divisors))
 
         assert self.mulargs, 'mulargs must not be empty'
         self._eval :Optional[float] = None
+
+    def minid(self) -> int:
+        return min(x.minid() for x in (self.mulargs + self.divisors))
+
+    def maxid(self) -> int:
+        return max(x.maxid() for x in (self.mulargs + self.divisors))
 
     def eval(self) -> float:
         if self._eval is None:
@@ -334,6 +391,8 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
     """
     terms に含まれる項全てをオペランドとする演算ノードを生成する。
     """
+    # termsはidでソートされていることを仮定する。
+
     arity = len(terms)
     can_addsub = AddSub not in map(type, terms)
     can_muldiv = MulDiv not in map(type, terms)
@@ -378,8 +437,10 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # A-B+C の値が0ならば、符号を反転させた -A+B-C の値も0である。
             # 両者は同等の式と見做すので、片方だけ生成すればよい。
             #
-            # よって生成した AddSub の値が0になる場合、最初の非0の項が
-            # 加算項なら残し、減算項なら捨てる。
+            # よって生成した AddSub の値が0になる場合、最初の非0の項を
+            # 加えるなら残し、減ずるなら捨てる。
+            #
+            # この処理には、terms がソートされていることは必要ではない。
             if (expr.eval() == 0
                 and first_nonzero_index is not None
                 and s[first_nonzero_index] < 0):
@@ -421,7 +482,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
 
         # 以下では、全ての項は非0である
 
-        # (検討中) 減算を含む項が複数ある場合、特定のケースのみ生成する。
+        # 減算を含む項が複数ある場合、特定のケースのみ生成する。
         #
         # A-B, C-D, E の3項を引数とする場合を考える。
         # 他に B-A, D-C, E という場合も(一部を除き)生成されるはずである。
@@ -449,14 +510,12 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
         # 上記のように、それらの半分は同等なので、次のようにして生成を省略できる。
         # - 減算を含む項の値を掛け合わせて >0 になる場合:
         #   全ての減算項の値が正の場合のみ MulDiv を生成する。
-        # - (検討中) 減算を含む項の値を掛け合わせて <0 になる場合:
+        # - 減算を含む項の値を掛け合わせて <0 になる場合:
+        #   例: 合計1, 3, 5, 7で4にする場合の (1-3)*(7-5)と(5-7)*(3-1)
         #   最後の減算項の値が負、それ以外の減算項の値が正の場合のみ MulDiv を
-        #   生成する……というのはうまくいかない!
-        #   項の値の符号の変化により、項の並びも都度変化するから。
-        #   なお、項の数が奇数なら全て負という方法も考えられるが、項の数が
-        #   偶数だとそうはいかない。
-        #   Value に id を持たせ、一番大きい id の Value を含む項を
-        #   「最後の項」とする、というのはどうか。
+        #   生成する。
+        #   ただし項の順序が値によって変化しないことが必要。
+        #   (符号が変われば値が変わるから)
         #
         # ※上記の減算を含む項は、値が0になるものは含めずに考える。
 
@@ -472,9 +531,13 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
                 if not all(x > 0 for x in nonzero_subtractions):
                     return
 
-            else:               # 掛け合わせて負になる場合
-                # (検討中)
-                pass
+            else:
+                # 減算を含む項が複数あり、掛け合わせて負になる場合、
+                # 最後の項を除く全ての項の値が正の場合のみ生成する。
+                # ただしソートが値によらない(idでのソート)ことを前提とする。
+                # その他の場合は重複ケースとみなして捨てる。
+                if not all(x > 0 for x in nonzero_subtractions[:-1]):
+                    return
 
         for s in opsigns(skip_div, terms):
             yield op_muldiv(s)(terms)
@@ -484,8 +547,8 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
 ### 式の構築
 ###
 
-def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
-    # terms はソートされていなければならない。
+def build_exprs_1(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
+    # termsはidでソートされていることを仮定する。
 
     if len(terms) == 1:
         try:
@@ -529,7 +592,7 @@ def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
             # 生成してしまう。
             # 条件をつけてこれを抑制できないか?
 
-            rest: List[SimpleExpr] = terms.copy()
+            rest: List[SimpleExpr] = list(terms)
             for i in reversed(indices): # indicesが昇順であることを前提とする
                 del rest[i]
 
@@ -539,12 +602,13 @@ def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
                       ','.join(map(str, selected_terms)))
 
             for expr in single_exprs(selected_terms):
-                yield from build_exprs_1(sortargs([expr] + rest))
+                yield from build_exprs_1(sort_by_id([expr] + rest))
 
 
 def build_exprs(nums: Sequence[float]) -> Generator[SimpleExpr, None, None]:
     """
     numsで与えられた項からなる式を全ての構造で生成する。
     """
+    # values は値でもidでも昇順に並んでいる
     values :List[SimpleExpr] = list(map(Value, sorted(nums))) # type: ignore
     yield from build_exprs_1(values)

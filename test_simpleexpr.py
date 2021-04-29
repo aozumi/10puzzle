@@ -21,6 +21,11 @@ class TestValue:
         node2 = Value(4)
         assert not (node1 == node2)
 
+    def test_hash(self):
+        node1 = Value(3)
+        assert Value(3) in set([node1])
+        assert Value(4) not in set([node1])
+
 
 def wrapvalue(args):
     for x in args:
