@@ -166,18 +166,22 @@ def mysorted(args: Iterable[T], *, key) -> List[T]:
 
 def sort_1(value_key: Callable[[Value], S],
            subexpr_key: Callable[[Union[AddSub, MulDiv]], S],
-           exprs: Sequence[T]
-) -> List[T]:
-    if len(exprs) < 2:
-        return list(exprs)
+           exprs: Iterable[T]
+) -> Sequence[T]:
+    if isinstance(exprs, Sequence) and len(exprs) < 2:
+        return exprs
 
-    values = filter(lambda x: isinstance(x, Value), exprs)
-    subexprs = filter(lambda x: not isinstance(x, Value), exprs)
+    exprs_list = list(exprs)
+    if len(exprs_list) < 2:
+        return exprs_list
+
+    values = filter(lambda x: isinstance(x, Value), exprs_list)
+    subexprs = filter(lambda x: not isinstance(x, Value), exprs_list)
 
     return mysorted(values, key=value_key) + mysorted(subexprs, key=subexpr_key)
 
 
-def sort_by_value(exprs: Sequence[T]) -> List[T]:
+def sort_by_value(exprs: Iterable[T]) -> Sequence[T]:
     return sort_1(eval_expr, sort_by_value_key, exprs)
 
 
@@ -534,7 +538,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
 ### 式の構築
 ###
 
-def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
+def build_exprs_1(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
     # terms はソートされていなければならない。
 
     if len(terms) == 1:
@@ -579,7 +583,7 @@ def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
             # 生成してしまう。
             # 条件をつけてこれを抑制できないか?
 
-            rest: List[SimpleExpr] = terms.copy()
+            rest: List[SimpleExpr] = list(terms)
             for i in reversed(indices): # indicesが昇順であることを前提とする
                 del rest[i]
 
