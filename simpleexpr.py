@@ -177,8 +177,8 @@ def sort_1(value_key: Callable[[Value], S],
     return mysorted(values, key=value_key) + mysorted(subexprs, key=subexpr_key)
 
 
-def sortargs(args: Sequence[T]) -> List[T]:
-    return sort_1(eval_expr, sort_by_value_key, args)
+def sort_by_value(exprs: Sequence[T]) -> List[T]:
+    return sort_1(eval_expr, sort_by_value_key, exprs)
 
 
 def sort_by_value_key(expr: SimpleExpr) -> List:
@@ -206,7 +206,7 @@ class AddSub (SimpleExpr):
 
     def __init__(self, addargs: Iterable[Union[Value, MulDiv]], subargs: Iterable[Union[Value, MulDiv]]) -> None:
         """
-        addargs, subargs は sortargs によりソート済みと仮定する。
+        addargs, subargs は sort_by_value によりソート済みと仮定する。
         それによって、引数の組み合わせに対して内部構造が一意になる。
         """
 
@@ -250,7 +250,7 @@ class MulDiv (SimpleExpr):
 
     def __init__(self, mulargs: Iterable[Union[Value, AddSub]], divisors: Iterable[Union[Value, AddSub]]) -> None:
         """
-        mulargs, divisors は sortargs によりソート済みと仮定する。
+        mulargs, divisors は sort_by_value によりソート済みと仮定する。
         それによって、引数の組み合わせに対して内部構造が一意になる。
         """
 
@@ -589,7 +589,7 @@ def build_exprs_1(terms: List[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
                       ','.join(map(str, selected_terms)))
 
             for expr in single_exprs(selected_terms):
-                yield from build_exprs_1(sortargs([expr] + rest))
+                yield from build_exprs_1(sort_by_value([expr] + rest))
 
 
 def build_exprs(nums: Sequence[float]) -> Generator[SimpleExpr, None, None]:
