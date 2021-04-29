@@ -391,6 +391,8 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
     """
     terms に含まれる項全てをオペランドとする演算ノードを生成する。
     """
+    # termsはidでソートされていることを仮定する。
+
     arity = len(terms)
     can_addsub = AddSub not in map(type, terms)
     can_muldiv = MulDiv not in map(type, terms)
@@ -544,7 +546,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
 ###
 
 def build_exprs_1(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, None]:
-    # terms はソートされていなければならない。
+    # termsはidでソートされていることを仮定する。
 
     if len(terms) == 1:
         try:
@@ -598,12 +600,13 @@ def build_exprs_1(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, No
                       ','.join(map(str, selected_terms)))
 
             for expr in single_exprs(selected_terms):
-                yield from build_exprs_1(sort_by_value([expr] + rest))
+                yield from build_exprs_1(sort_by_id([expr] + rest))
 
 
 def build_exprs(nums: Sequence[float]) -> Generator[SimpleExpr, None, None]:
     """
     numsで与えられた項からなる式を全ての構造で生成する。
     """
+    # values は値でもidでも昇順に並んでいる
     values :List[SimpleExpr] = list(map(Value, sorted(nums))) # type: ignore
     yield from build_exprs_1(values)
