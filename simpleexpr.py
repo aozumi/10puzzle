@@ -203,6 +203,11 @@ def sort_by_value_key(expr: SimpleExpr) -> List:
         raise TypeError('expr must be a SimpleExpr')
 
 
+def sort_by_id(exprs: Iterable[T]) -> Sequence[T]:
+    minid = lambda x: x.minid()
+    return sort_1(minid, minid, exprs)
+
+
 class AddSub (SimpleExpr):
     """
     加算・減算ノード。
