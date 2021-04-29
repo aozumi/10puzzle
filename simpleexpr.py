@@ -437,8 +437,10 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # A-B+C の値が0ならば、符号を反転させた -A+B-C の値も0である。
             # 両者は同等の式と見做すので、片方だけ生成すればよい。
             #
-            # よって生成した AddSub の値が0になる場合、最初の非0の項が
-            # 加算項なら残し、減算項なら捨てる。
+            # よって生成した AddSub の値が0になる場合、最初の非0の項を
+            # 加えるなら残し、減ずるなら捨てる。
+            #
+            # この処理には、terms がソートされていることは必要ではない。
             if (expr.eval() == 0
                 and first_nonzero_index is not None
                 and s[first_nonzero_index] < 0):
