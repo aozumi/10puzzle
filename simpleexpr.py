@@ -178,10 +178,10 @@ def sort_1(value_key: Callable[[Value], S],
 
 
 def sortargs(args: Sequence[T]) -> List[T]:
-    return sort_1(eval_expr, sortkey, args)
+    return sort_1(eval_expr, sort_by_value_key, args)
 
 
-def sortkey(expr: SimpleExpr) -> List:
+def sort_by_value_key(expr: SimpleExpr) -> List:
     """
     SimpleExprをソートするためのkey関数。
     """
@@ -189,12 +189,12 @@ def sortkey(expr: SimpleExpr) -> List:
         return [expr.value]
     elif isinstance(expr, AddSub):
         return [expr.eval(),
-                list(map(sortkey, expr.addargs)),
-                list(map(sortkey, expr.subargs))]
+                list(map(sort_by_value_key, expr.addargs)),
+                list(map(sort_by_value_key, expr.subargs))]
     elif isinstance(expr, MulDiv):
         return [expr.eval(),
-                list(map(sortkey, expr.mulargs)),
-                list(map(sortkey, expr.divisors))]
+                list(map(sort_by_value_key, expr.mulargs)),
+                list(map(sort_by_value_key, expr.divisors))]
     else:
         raise TypeError('expr must be a SimpleExpr')
 
