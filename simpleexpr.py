@@ -156,7 +156,7 @@ def eval_expr(x: SimpleExpr) -> float:
     return x.eval()
 
 
-def mysorted(args, *, key):
+def mysorted(args: Iterable[T], *, key) -> List[T]:
     args = list(args)
     if len(args) < 2:
         return args
