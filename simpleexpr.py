@@ -145,6 +145,7 @@ class Value (SimpleExpr):
 
 
 T = TypeVar('T', bound=SimpleExpr)
+S = TypeVar('S')
 
 
 def eval_exprs(args: Iterable[T]) -> Generator[float, None, None]:
@@ -163,11 +164,21 @@ def mysorted(args, *, key):
         return sorted(args, key=key)
 
 
-def sortargs(args: Sequence[T]) -> List[T]:
-    values = filter(lambda x: isinstance(x, Value), args)
-    subexprs = filter(lambda x: not isinstance(x, Value), args)
+def sort_1(value_key: Callable[[Value], S],
+           subexpr_key: Callable[[Union[AddSub, MulDiv]], S],
+           exprs: Sequence[T]
+) -> List[T]:
+    if len(exprs) < 2:
+        return list(exprs)
 
-    return mysorted(values, key=eval_expr) + mysorted(subexprs, key=sortkey)
+    values = filter(lambda x: isinstance(x, Value), exprs)
+    subexprs = filter(lambda x: not isinstance(x, Value), exprs)
+
+    return mysorted(values, key=value_key) + mysorted(subexprs, key=subexpr_key)
+
+
+def sortargs(args: Sequence[T]) -> List[T]:
+    return sort_1(eval_expr, sortkey, args)
 
 
 def sortkey(expr: SimpleExpr) -> List:
