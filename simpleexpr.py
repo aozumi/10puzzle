@@ -74,16 +74,16 @@ class SimpleExpr:
     """
 
     def minid(self) -> int:
-        raise NotImplemented
+        raise NotImplementedError()
 
     def maxid(self) -> int:
-        raise NotImplemented
+        raise NotImplementedError()
 
     def eval(self) -> float:
         """
         式の値を計算する。
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} {self}>"
