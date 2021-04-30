@@ -9,3 +9,6 @@ test: .PHONY
 
 typecheck: .PHONY
 	${MYPY} findall.py test_simpleexpr.py test_utils.py
+
+allclean: .PHONY
+	rm -rf .mypy_cache .pytest_cache __pycache__
