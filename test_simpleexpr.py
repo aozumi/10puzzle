@@ -268,6 +268,40 @@ def test_single_exprs__muldiv_of_sub_sub():
                        MulDiv([sub(9, 7)], [sub(6, 1)]),
                ])
 
+def test_single_exprs_1_2_3_5_5():
+    terms = list(map(Value, [1, 2, 3, 5, 5]))
+    addsubs = [ t for t in single_exprs(terms)
+                if isinstance(t, AddSub) ]
+
+    assert addsubs == [
+        add(1, 2, 3, 5, 5),
+        addsub([1, 2, 3, 5], [5]),
+        addsub([1, 2, 3], [5, 5]),
+        addsub([1, 2, 5, 5], [3]),
+        addsub([1, 2, 5], [3, 5]),
+        #addsub([1, 5, 5], [2, 3]),
+        addsub([1, 2], [3, 5, 5]),
+        addsub([1, 3, 5, 5], [2]),
+        addsub([1, 3, 5], [2, 5]),
+        addsub([1, 3], [2, 5, 5]),
+        #addsub([1, 5], [2, 3, 5]),
+        addsub([1], [2, 3, 5, 5]),
+
+        addsub([2, 3, 5, 5], [1]),
+        addsub([2, 3, 5], [1, 5]),
+        addsub([2, 3], [1, 5, 5]),
+        addsub([2, 5, 5], [1, 3]),
+        addsub([2, 5], [1, 3, 5]),
+        addsub([2], [1, 3, 5, 5]),
+
+        #addsub([3, 5, 5], [1, 2]),
+        #addsub([3, 5], [1, 2, 5]),
+        #addsub([3], [1, 2, 5, 5]),
+        #addsub([5, 5], [1, 2, 3]),
+        #addsub([5], [1, 2, 3, 5]),
+    ]
+
+
     # # 1-6 と 9-7 の場合
     # # 1-6, 9-7  を項に持つ MulDiv は生成する
     # terms = [sub(1, 6), sub(7, 9)]

@@ -4,7 +4,7 @@ from typing import Union, List, Literal, Sequence, Generator, Iterable, TypeVar,
 from itertools import combinations, product
 import logging
 
-from utils import first
+from utils import first, subsums
 
 
 LOG = logging.getLogger(__name__)
@@ -424,10 +424,11 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
             # それ以外は減算を生成する。
             return False
 
+        # 非0項のインデックスのリスト
+        nonzero_indices = [i for i,t in enumerate(terms) if t.eval() != 0]
+
         # 最初の非0項のインデックス (非0項がなければ None)
-        first_nonzero_index = first(
-            i for i, t in enumerate(terms) if t.eval() != 0
-        )
+        first_nonzero_index = nonzero_indices[0] if nonzero_indices else None
 
         for s in opsigns(skip_sub, terms):
             expr = op_addsub(s)(terms)
@@ -446,11 +447,22 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
                 and s[first_nonzero_index] < 0):
                 continue
 
-            # (検討中) 任意個の部分項(各項は非0)の和が0になる場合、
+            # 任意個の部分項(各項は非0)の和が0になる場合、
             # それらを符号反転したケースも0になる。
             # よって両者を重複するとみなし片方を排除したい。
             # 最初の項が加算項なら残し、減算項なら捨てる。
+            #
+            # つまり、先頭のsが負で部分和が0になる非0項の部分集合があるなら
+            # 生成しない。
+            #
             # これは上の重複排除を一般化したもの。
+
+            nonzero_values = [terms[i].eval() * s[i] for i in nonzero_indices]
+
+            if any(-nonzero_values[j] in subsums(nonzero_values[j+1:])
+                   for j in range(len(nonzero_indices) - 1)
+                   if s[nonzero_indices[j]] < 0):
+                continue
 
             yield expr
 
