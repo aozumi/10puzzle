@@ -5,9 +5,11 @@
 # - 演算は四則演算のみ。べき乗、平方根などは不可。
 # - 数字を並べて合体させる(例: 1 と 1 で 11)のは不可。
 
+import argparse
 from typing import Sequence, Generator, Iterable, List, Optional, Set
 import logging
 import sys
+from dataclasses import dataclass
 
 from simpleexpr import SimpleExpr, build_exprs
 
@@ -40,22 +42,24 @@ def find_solutions(numbers: Sequence[float], value=10) -> Generator[SimpleExpr, 
     LOG.debug("%d exprs generated", n)
 
 
-QUIZ1 = [1, 1, 5, 8]
-QUIZ2 = [3, 4, 7, 8]
-QUIZ3 = [9, 9, 9, 9]
+@dataclass
+class Options:
+    numbers: List[int]
+    value: int
 
 
 def init_options() -> Optional[List[int]]:
-    args = sys.argv[1:]
+    parser = argparse.ArgumentParser(description='10パズルの解を探す')
+    parser.add_argument('--value', metavar='N',
+                        help='解となる式の値 (デフォルト: 10)',
+                        type=int,
+                        default=10)
+    parser.add_argument('numbers', metavar='N',
+                        type=int,
+                        nargs='+')
 
-    if len(args) == 0:
-        return None
-
-    if len(args) >= 2:
-        return list(map(int, args))
-
-    print("usage: puzzle.py [N N ...]")
-    exit(1)
+    args = parser.parse_args()
+    return Options(args.numbers, args.value)
 
 
 def main() -> None:
@@ -63,25 +67,16 @@ def main() -> None:
         # level=logging.DEBUG,
     )
 
-    q = init_options()
-    if q:
-        qs = [q]
-    else:
-        qs = [QUIZ1, QUIZ2, QUIZ3]
+    options = init_options()
+    quiz = sorted(options.numbers)
 
-    for quiz in qs:
-        print("")
-        print("Quiz: " + ', '.join(map(str, quiz)))
-
-        found = False
-        for sol in remove_duplicated_exprs(find_solutions(quiz)):
-            if not found:
-                print("Solutions:")
-            found = True
-            print("  " + str(sol))
-        if not found:
-            print("No solution found.")
-            exit(3)
+    found = False
+    for sol in remove_duplicated_exprs(find_solutions(quiz, options.value)):
+        found = True
+        print(sol)
+    if not found:
+        print("No solution found.", file=sys.stderr)
+        exit(3)
 
 
 if __name__ == '__main__':
