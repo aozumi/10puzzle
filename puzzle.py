@@ -48,7 +48,7 @@ class Options:
     value: int
 
 
-def init_options() -> Optional[List[int]]:
+def init_options() -> Options:
     parser = argparse.ArgumentParser(description='10パズルの解を探す')
     parser.add_argument('--value', metavar='N',
                         help='解となる式の値 (デフォルト: 10)',
