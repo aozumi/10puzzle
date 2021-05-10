@@ -234,7 +234,7 @@ class AddSub (SimpleExpr):
 
     def eval(self) -> float:
         if self._eval is None:
-            self._eval = add(eval_exprs(self.addargs)) - add(eval_exprs(self.subargs))
+            self._eval = sum(eval_exprs(self.addargs)) - sum(eval_exprs(self.subargs))
         return self._eval
 
     def to_s(self, *, head: bool = False) -> str:
