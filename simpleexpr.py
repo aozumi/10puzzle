@@ -10,12 +10,9 @@ from utils import first, subsums
 LOG = logging.getLogger(__name__)
 
 
-def add(args: Iterable[float]) -> float:
-    return reduce(lambda x, y: x + y, args, cast(float, 0))
-
-
-def mul(args: Iterable[float]) -> float:
+def prod(args: Iterable[float]) -> float:
     return reduce(lambda x, y: x * y, args, cast(float, 1))
+
 
 # 式の表現
 # --------
@@ -234,7 +231,7 @@ class AddSub (SimpleExpr):
 
     def eval(self) -> float:
         if self._eval is None:
-            self._eval = add(eval_exprs(self.addargs)) - add(eval_exprs(self.subargs))
+            self._eval = sum(eval_exprs(self.addargs)) - sum(eval_exprs(self.subargs))
         return self._eval
 
     def to_s(self, *, head: bool = False) -> str:
@@ -275,7 +272,7 @@ class MulDiv (SimpleExpr):
 
     def eval(self) -> float:
         if self._eval is None:
-            self._eval = mul(eval_exprs(self.mulargs)) / mul(eval_exprs(self.divisors))
+            self._eval = prod(eval_exprs(self.mulargs)) / prod(eval_exprs(self.divisors))
         return self._eval
 
     def _argstr(self, arg, head: bool = False) -> str:
@@ -536,7 +533,7 @@ def single_exprs(terms: Sequence[SimpleExpr]) -> Generator[SimpleExpr, None, Non
         ]
 
         if len(nonzero_subtractions) >= 2:
-            if mul(nonzero_subtractions) > 0:
+            if prod(nonzero_subtractions) > 0:
                 # 減算を含む項が複数あり、掛け合わせて正になる場合、
                 # 全ての項の値が正の場合のみ生成する。
                 # その他の場合は重複ケースとみなして捨てる。
