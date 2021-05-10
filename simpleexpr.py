@@ -10,12 +10,9 @@ from utils import first, subsums
 LOG = logging.getLogger(__name__)
 
 
-def add(args: Iterable[float]) -> float:
-    return reduce(lambda x, y: x + y, args, cast(float, 0))
-
-
 def prod(args: Iterable[float]) -> float:
     return reduce(lambda x, y: x * y, args, cast(float, 1))
+
 
 # 式の表現
 # --------
